@@ -10,14 +10,18 @@
 
 #include <JuceHeader.h>
 
-const int NUM_FILTER_SLOPES = 4;
-
+// NUM_FILTER_SLOPES == num entries in Slope == num filters in CutFilter
+const int NUM_FILTER_SLOPES = 8;
 enum Slope
 {
 	Slope_12,
 	Slope_24,
 	Slope_36,
-	Slope_48
+	Slope_48,
+	Slope_60,
+	Slope_72,
+	Slope_84,
+	Slope_96
 };
 
 struct ChainSettings
@@ -81,7 +85,7 @@ public:
 private:
 	using Filter = juce::dsp::IIR::Filter<float>;
 
-	using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+	using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter, Filter, Filter, Filter, Filter>;
 
 	using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
 
@@ -109,6 +113,10 @@ private:
 		cutFilter.setBypassed<1>(true);
 		cutFilter.setBypassed<2>(true);
 		cutFilter.setBypassed<3>(true);
+		cutFilter.setBypassed<4>(true);
+		cutFilter.setBypassed<5>(true);
+		cutFilter.setBypassed<6>(true);
+		cutFilter.setBypassed<7>(true);
 
 		switch (slope)
 		{
@@ -139,6 +147,66 @@ private:
 				cutFilter.setBypassed<2>(false);
 				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
 				cutFilter.setBypassed<3>(false);
+				break;
+			case Slope_60:
+				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
+				cutFilter.setBypassed<0>(false);
+				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
+				cutFilter.setBypassed<1>(false);
+				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
+				cutFilter.setBypassed<2>(false);
+				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
+				cutFilter.setBypassed<3>(false);
+				*cutFilter.get<4>().coefficients = *cutCoefficients[4];
+				cutFilter.setBypassed<4>(false);
+				break;
+			case Slope_72:
+				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
+				cutFilter.setBypassed<0>(false);
+				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
+				cutFilter.setBypassed<1>(false);
+				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
+				cutFilter.setBypassed<2>(false);
+				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
+				cutFilter.setBypassed<3>(false);
+				*cutFilter.get<4>().coefficients = *cutCoefficients[4];
+				cutFilter.setBypassed<4>(false);
+				*cutFilter.get<5>().coefficients = *cutCoefficients[5];
+				cutFilter.setBypassed<5>(false);
+				break;
+			case Slope_84:
+				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
+				cutFilter.setBypassed<0>(false);
+				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
+				cutFilter.setBypassed<1>(false);
+				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
+				cutFilter.setBypassed<2>(false);
+				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
+				cutFilter.setBypassed<3>(false);
+				*cutFilter.get<4>().coefficients = *cutCoefficients[4];
+				cutFilter.setBypassed<4>(false);
+				*cutFilter.get<5>().coefficients = *cutCoefficients[5];
+				cutFilter.setBypassed<5>(false);
+				*cutFilter.get<6>().coefficients = *cutCoefficients[6];
+				cutFilter.setBypassed<6>(false);
+				break;
+			case Slope_96:
+				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
+				cutFilter.setBypassed<0>(false);
+				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
+				cutFilter.setBypassed<1>(false);
+				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
+				cutFilter.setBypassed<2>(false);
+				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
+				cutFilter.setBypassed<3>(false);
+				*cutFilter.get<4>().coefficients = *cutCoefficients[4];
+				cutFilter.setBypassed<4>(false);
+				*cutFilter.get<5>().coefficients = *cutCoefficients[5];
+				cutFilter.setBypassed<5>(false);
+				*cutFilter.get<6>().coefficients = *cutCoefficients[6];
+				cutFilter.setBypassed<6>(false);
+				*cutFilter.get<7>().coefficients = *cutCoefficients[7];
+				cutFilter.setBypassed<7>(false);
 				break;
 		}
 	}
