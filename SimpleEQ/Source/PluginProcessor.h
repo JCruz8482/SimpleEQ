@@ -46,6 +46,11 @@ using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter, Filt
 
 using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
 
+using Coefficients = Filter::CoefficientsPtr;
+
+
+Coefficients makePeakFilter(const ChainSettings& chainSettings, double sampleRate);
+
 //==============================================================================
 /**
 */
@@ -100,8 +105,6 @@ private:
 	MonoChain leftChain, rightChain;
 
 	void updatePeakFilter(const ChainSettings& chainSettings);
-	using Coefficients = Filter::CoefficientsPtr;
-	static void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
 	template<int Index, typename ChainType, typename CoefficientType>
 	void update(ChainType& chain, const CoefficientType& coefficients)
@@ -168,6 +171,8 @@ private:
 		const Slope slope,
 		juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>(*func)(float, double, int));
 	void updateFilters();
+
+	void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleEQAudioProcessor)
