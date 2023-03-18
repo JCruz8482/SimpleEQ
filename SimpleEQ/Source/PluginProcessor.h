@@ -102,12 +102,18 @@ private:
 	using Coefficients = Filter::CoefficientsPtr;
 	static void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
+	template<int Index, typename ChainType, typename CoefficientType>
+	void update(ChainType& chain, const CoefficientType& coefficients)
+	{
+		updateCoefficients(chain.template get<Index>().coefficients, coefficients[Index]);
+		chain.template setBypassed<Index>(false);
+	}
+
 	template<typename ChainType, typename CoefficientType>
 	void updateCutFilter(
 		ChainType& cutFilter,
 		const CoefficientType& cutCoefficients,
-		Slope slope
-	)
+		const Slope slope)
 	{
 		cutFilter.setBypassed<0>(true);
 		cutFilter.setBypassed<1>(true);
@@ -120,94 +126,38 @@ private:
 
 		switch (slope)
 		{
-			case Slope_12:
-				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
-				cutFilter.setBypassed<0>(false);
-				break;
-			case Slope_24:
-				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
-				cutFilter.setBypassed<0>(false);
-				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
-				cutFilter.setBypassed<1>(false);
-				break;
-			case Slope_36:
-				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
-				cutFilter.setBypassed<0>(false);
-				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
-				cutFilter.setBypassed<1>(false);
-				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
-				cutFilter.setBypassed<2>(false);
-				break;
-			case Slope_48:
-				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
-				cutFilter.setBypassed<0>(false);
-				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
-				cutFilter.setBypassed<1>(false);
-				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
-				cutFilter.setBypassed<2>(false);
-				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
-				cutFilter.setBypassed<3>(false);
-				break;
-			case Slope_60:
-				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
-				cutFilter.setBypassed<0>(false);
-				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
-				cutFilter.setBypassed<1>(false);
-				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
-				cutFilter.setBypassed<2>(false);
-				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
-				cutFilter.setBypassed<3>(false);
-				*cutFilter.get<4>().coefficients = *cutCoefficients[4];
-				cutFilter.setBypassed<4>(false);
-				break;
-			case Slope_72:
-				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
-				cutFilter.setBypassed<0>(false);
-				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
-				cutFilter.setBypassed<1>(false);
-				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
-				cutFilter.setBypassed<2>(false);
-				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
-				cutFilter.setBypassed<3>(false);
-				*cutFilter.get<4>().coefficients = *cutCoefficients[4];
-				cutFilter.setBypassed<4>(false);
-				*cutFilter.get<5>().coefficients = *cutCoefficients[5];
-				cutFilter.setBypassed<5>(false);
-				break;
-			case Slope_84:
-				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
-				cutFilter.setBypassed<0>(false);
-				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
-				cutFilter.setBypassed<1>(false);
-				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
-				cutFilter.setBypassed<2>(false);
-				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
-				cutFilter.setBypassed<3>(false);
-				*cutFilter.get<4>().coefficients = *cutCoefficients[4];
-				cutFilter.setBypassed<4>(false);
-				*cutFilter.get<5>().coefficients = *cutCoefficients[5];
-				cutFilter.setBypassed<5>(false);
-				*cutFilter.get<6>().coefficients = *cutCoefficients[6];
-				cutFilter.setBypassed<6>(false);
-				break;
 			case Slope_96:
-				*cutFilter.get<0>().coefficients = *cutCoefficients[0];
-				cutFilter.setBypassed<0>(false);
-				*cutFilter.get<1>().coefficients = *cutCoefficients[1];
-				cutFilter.setBypassed<1>(false);
-				*cutFilter.get<2>().coefficients = *cutCoefficients[2];
-				cutFilter.setBypassed<2>(false);
-				*cutFilter.get<3>().coefficients = *cutCoefficients[3];
-				cutFilter.setBypassed<3>(false);
-				*cutFilter.get<4>().coefficients = *cutCoefficients[4];
-				cutFilter.setBypassed<4>(false);
-				*cutFilter.get<5>().coefficients = *cutCoefficients[5];
-				cutFilter.setBypassed<5>(false);
-				*cutFilter.get<6>().coefficients = *cutCoefficients[6];
-				cutFilter.setBypassed<6>(false);
-				*cutFilter.get<7>().coefficients = *cutCoefficients[7];
-				cutFilter.setBypassed<7>(false);
-				break;
+			{
+				update<7>(cutFilter, cutCoefficients);
+			}
+			case Slope_84:
+			{
+				update<6>(cutFilter, cutCoefficients);
+			}
+			case Slope_72:
+			{
+				update<5>(cutFilter, cutCoefficients);
+			}
+			case Slope_60:
+			{
+				update<4>(cutFilter, cutCoefficients);
+			}
+			case Slope_48:
+			{
+				update<3>(cutFilter, cutCoefficients);
+			}
+			case Slope_36:
+			{
+				update<2>(cutFilter, cutCoefficients);
+			}
+			case Slope_24:
+			{
+				update<1>(cutFilter, cutCoefficients);
+			}
+			case Slope_12:
+			{
+				update<0>(cutFilter, cutCoefficients);
+			}
 		}
 	}
 
