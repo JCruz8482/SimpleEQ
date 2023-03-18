@@ -230,7 +230,7 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
 	settings.lowCutFreq = apvts.getRawParameterValue("LowCut Freq")->load();
 	settings.highCutFreq = apvts.getRawParameterValue("HighCut Freq")->load();
 	settings.peakFreq = apvts.getRawParameterValue("Peak Freq")->load();
-	settings.peakGainInDecibels = apvts.getRawParameterValue("Peak Gains")->load();
+	settings.peakGainInDecibels = apvts.getRawParameterValue("Peak Gain")->load();
 	settings.peakQuality = apvts.getRawParameterValue("Peak Quality")->load();
 	settings.lowCutSlope = static_cast<Slope>(apvts.getRawParameterValue("LowCut Slope")->load());
 	settings.highCutSlope = static_cast<Slope>(apvts.getRawParameterValue("HighCut Slope")->load());
@@ -305,8 +305,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::crea
 		750.f));
 
 	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"Peak Gains",
-		"Peak Gains",
+		"Peak Gain",
+		"Peak Gain",
 		gain_range,
 		0.f));
 
