@@ -107,7 +107,7 @@ void SimpleEQAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
 	auto chainSettings = getChainSettings(apvts);
 
 	updatePeakFilter(chainSettings);
-	updateCutFilters(chainSettings);
+	updateFilters(chainSettings);
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -158,9 +158,7 @@ void SimpleEQAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 		buffer.clear(i, 0, buffer.getNumSamples());
 
 	auto chainSettings = getChainSettings(apvts);
-
-	updatePeakFilter(chainSettings);
-	updateCutFilters(chainSettings);
+	updateFilters(chainSettings);
 
 	juce::dsp::AudioBlock<float> block(buffer);
 
@@ -225,18 +223,21 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
 	settings.highCutFreq = apvts.getRawParameterValue("HighCut Freq")->load();
 	settings.peakFreq = apvts.getRawParameterValue("Peak Freq")->load();
 	settings.peakGainInDecibels = apvts.getRawParameterValue("Peak Gains")->load();
+	settings.peakQuality = apvts.getRawParameterValue("Peak Quality")->load();
 	settings.lowCutSlope = static_cast<Slope>(apvts.getRawParameterValue("LowCut Slope")->load());
 	settings.highCutSlope = static_cast<Slope>(apvts.getRawParameterValue("HighCut Slope")->load());
 
 	return settings;
 }
 
-void SimpleEQAudioProcessor::updateCutFilters(const ChainSettings& chainSettings)
+void SimpleEQAudioProcessor::updateFilters(const ChainSettings& chainSettings)
 {
 	updateCutFilter<ChainPositions::LowCut>(
 		chainSettings.lowCutFreq,
 		chainSettings.lowCutSlope,
 		&juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod);
+
+	updatePeakFilter(chainSettings);
 
 	updateCutFilter<ChainPositions::HighCut>(
 		chainSettings.highCutFreq,
@@ -261,38 +262,9 @@ void SimpleEQAudioProcessor::updateCutFilter(
 
 juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::createParameterLayout()
 {
-	juce::AudioProcessorValueTreeState::ParameterLayout layout;
-
-	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"LowCut Freq",
-		"LowCut Freq",
-		juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
-		20.f));
-
-	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"HighCut Freq",
-		"HighCut Freq",
-		juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
-		20000.f));
-
-	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"Peak Freq",
-		"Peak Freq",
-		juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f),
-		750.f));
-
-	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"Peak Gains",
-		"Peak Gains",
-		juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
-		0.f));
-
-	layout.add(std::make_unique<juce::AudioParameterFloat>(
-		"Peak Quality",
-		"Peak Quality",
-		juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f),
-		1.f));
-
+	const auto freq_range = juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 0.25f);
+	const auto gain_range = juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f);
+	const auto quality_range = juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 0.8f);
 	juce::StringArray filterSlopeValues;
 	for (int i = 0; i < NUM_FILTER_SLOPES; ++i)
 	{
@@ -301,6 +273,38 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::crea
 		str << " db/Oct";
 		filterSlopeValues.add(str);
 	}
+
+	juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+	layout.add(std::make_unique<juce::AudioParameterFloat>(
+		"LowCut Freq",
+		"LowCut Freq",
+		freq_range,
+		20.f));
+
+	layout.add(std::make_unique<juce::AudioParameterFloat>(
+		"HighCut Freq",
+		"HighCut Freq",
+		freq_range,
+		20000.f));
+
+	layout.add(std::make_unique<juce::AudioParameterFloat>(
+		"Peak Freq",
+		"Peak Freq",
+		freq_range,
+		750.f));
+
+	layout.add(std::make_unique<juce::AudioParameterFloat>(
+		"Peak Gains",
+		"Peak Gains",
+		gain_range,
+		0.f));
+
+	layout.add(std::make_unique<juce::AudioParameterFloat>(
+		"Peak Quality",
+		"Peak Quality",
+		quality_range,
+		1.f));
 
 	layout.add(std::make_unique<juce::AudioParameterChoice>
 		("LowCut Slope", "LowCut Slope", filterSlopeValues, 0));
