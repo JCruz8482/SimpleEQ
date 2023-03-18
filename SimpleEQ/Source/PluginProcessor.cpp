@@ -106,8 +106,7 @@ void SimpleEQAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
 
 	auto chainSettings = getChainSettings(apvts);
 
-	updatePeakFilter(chainSettings);
-	updateFilters(chainSettings);
+	updateFilters();
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -157,8 +156,7 @@ void SimpleEQAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 	for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
 		buffer.clear(i, 0, buffer.getNumSamples());
 
-	auto chainSettings = getChainSettings(apvts);
-	updateFilters(chainSettings);
+	updateFilters();
 
 	juce::dsp::AudioBlock<float> block(buffer);
 
@@ -190,12 +188,22 @@ void SimpleEQAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 	// You should use this method to store your parameters in the memory block.
 	// You could do that either as raw data, or use the XML or ValueTree classes
 	// as intermediaries to make it easy to save and load complex data.
+
+	juce::MemoryOutputStream mos(destData, true);
+	apvts.state.writeToStream(mos);
 }
 
 void SimpleEQAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
 	// You should use this method to restore your parameters from this memory block,
 	// whose contents will have been created by the getStateInformation() call.
+
+	auto tree = juce::ValueTree::readFromData(data, sizeInBytes);
+	if (tree.isValid())
+	{
+		apvts.replaceState(tree);
+		updateFilters();
+	}
 }
 
 void SimpleEQAudioProcessor::updateCoefficients(Coefficients& old, const Coefficients& replacements)
@@ -230,8 +238,10 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
 	return settings;
 }
 
-void SimpleEQAudioProcessor::updateFilters(const ChainSettings& chainSettings)
+void SimpleEQAudioProcessor::updateFilters()
 {
+	auto chainSettings = getChainSettings(apvts);
+
 	updateCutFilter<ChainPositions::LowCut>(
 		chainSettings.lowCutFreq,
 		chainSettings.lowCutSlope,

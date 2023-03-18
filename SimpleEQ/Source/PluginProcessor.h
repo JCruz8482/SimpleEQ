@@ -166,7 +166,7 @@ private:
 		const float cutFreq,
 		const Slope slope,
 		juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>(*func)(float, double, int));
-	void updateFilters(const ChainSettings& chainSettings);
+	void updateFilters();
 
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleEQAudioProcessor)
