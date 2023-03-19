@@ -47,9 +47,77 @@ using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter, Filt
 using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
 
 using Coefficients = Filter::CoefficientsPtr;
-
+void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
 Coefficients makePeakFilter(const ChainSettings& chainSettings, double sampleRate);
+
+template<int Index, typename ChainType, typename CoefficientType>
+void update(ChainType& chain, const CoefficientType& coefficients)
+{
+	updateCoefficients(chain.template get<Index>().coefficients, coefficients[Index]);
+	chain.template setBypassed<Index>(false);
+}
+
+template<typename ChainType, typename CoefficientType>
+void applyCoefficientsToCutFilter(
+	ChainType& cutFilter,
+	const CoefficientType& cutCoefficients,
+	const Slope slope)
+{
+	cutFilter.template setBypassed<0>(true);
+	cutFilter.template setBypassed<1>(true);
+	cutFilter.template setBypassed<2>(true);
+	cutFilter.template setBypassed<3>(true);
+	cutFilter.template setBypassed<4>(true);
+	cutFilter.template setBypassed<5>(true);
+	cutFilter.template setBypassed<6>(true);
+	cutFilter.template setBypassed<7>(true);
+
+	switch (slope)
+	{
+		case Slope_96:
+		{
+			update<7>(cutFilter, cutCoefficients);
+		}
+		case Slope_84:
+		{
+			update<6>(cutFilter, cutCoefficients);
+		}
+		case Slope_72:
+		{
+			update<5>(cutFilter, cutCoefficients);
+		}
+		case Slope_60:
+		{
+			update<4>(cutFilter, cutCoefficients);
+		}
+		case Slope_48:
+		{
+			update<3>(cutFilter, cutCoefficients);
+		}
+		case Slope_36:
+		{
+			update<2>(cutFilter, cutCoefficients);
+		}
+		case Slope_24:
+		{
+			update<1>(cutFilter, cutCoefficients);
+		}
+		case Slope_12:
+		{
+			update<0>(cutFilter, cutCoefficients);
+		}
+	}
+}
+
+inline auto makeCutFilter(
+	const float cutFreq,
+	double sampleRate,
+	Slope slope,
+	juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>(*func)(float, double, int))
+{
+	return func(cutFreq, sampleRate, (2 * (slope + 1)));
+}
 
 //==============================================================================
 /**
@@ -105,75 +173,12 @@ private:
 	MonoChain leftChain, rightChain;
 
 	void updatePeakFilter(const ChainSettings& chainSettings);
-
-	template<int Index, typename ChainType, typename CoefficientType>
-	void update(ChainType& chain, const CoefficientType& coefficients)
-	{
-		updateCoefficients(chain.template get<Index>().coefficients, coefficients[Index]);
-		chain.template setBypassed<Index>(false);
-	}
-
-	template<typename ChainType, typename CoefficientType>
-	void updateCutFilter(
-		ChainType& cutFilter,
-		const CoefficientType& cutCoefficients,
-		const Slope slope)
-	{
-		cutFilter.setBypassed<0>(true);
-		cutFilter.setBypassed<1>(true);
-		cutFilter.setBypassed<2>(true);
-		cutFilter.setBypassed<3>(true);
-		cutFilter.setBypassed<4>(true);
-		cutFilter.setBypassed<5>(true);
-		cutFilter.setBypassed<6>(true);
-		cutFilter.setBypassed<7>(true);
-
-		switch (slope)
-		{
-			case Slope_96:
-			{
-				update<7>(cutFilter, cutCoefficients);
-			}
-			case Slope_84:
-			{
-				update<6>(cutFilter, cutCoefficients);
-			}
-			case Slope_72:
-			{
-				update<5>(cutFilter, cutCoefficients);
-			}
-			case Slope_60:
-			{
-				update<4>(cutFilter, cutCoefficients);
-			}
-			case Slope_48:
-			{
-				update<3>(cutFilter, cutCoefficients);
-			}
-			case Slope_36:
-			{
-				update<2>(cutFilter, cutCoefficients);
-			}
-			case Slope_24:
-			{
-				update<1>(cutFilter, cutCoefficients);
-			}
-			case Slope_12:
-			{
-				update<0>(cutFilter, cutCoefficients);
-			}
-		}
-	}
-
+	void updateFilters();
 	template<int Index>
 	void updateCutFilter(
 		const float cutFreq,
 		const Slope slope,
 		juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>(*func)(float, double, int));
-	void updateFilters();
-
-	void updateCoefficients(Coefficients& old, const Coefficients& replacements);
-
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleEQAudioProcessor)
 };

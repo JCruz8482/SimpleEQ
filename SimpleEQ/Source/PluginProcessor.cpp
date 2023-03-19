@@ -206,7 +206,7 @@ void SimpleEQAudioProcessor::setStateInformation(const void* data, int sizeInByt
 	}
 }
 
-void SimpleEQAudioProcessor::updateCoefficients(Coefficients& old, const Coefficients& replacements)
+void updateCoefficients(Coefficients& old, const Coefficients& replacements)
 {
 	*old = *replacements;
 }
@@ -260,19 +260,18 @@ void SimpleEQAudioProcessor::updateFilters()
 		&juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod);
 }
 
-template<int Index>
-void SimpleEQAudioProcessor::updateCutFilter(
+template<int Index> void SimpleEQAudioProcessor::updateCutFilter(
 	const float cutFreq,
 	const Slope slope,
 	juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>(*func)(float, double, int))
 {
-	auto cutCoefficients = func(cutFreq, getSampleRate(), 2 * (slope + 1));
+	auto cutCoefficients = makeCutFilter(cutFreq, getSampleRate(), slope, func);
 
 	auto& leftCut = leftChain.get<Index>();
 	auto& rightCut = rightChain.get<Index>();
 
-	updateCutFilter(leftCut, cutCoefficients, slope);
-	updateCutFilter(rightCut, cutCoefficients, slope);
+	applyCoefficientsToCutFilter(leftCut, cutCoefficients, slope);
+	applyCoefficientsToCutFilter(rightCut, cutCoefficients, slope);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::createParameterLayout()
