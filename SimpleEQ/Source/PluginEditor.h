@@ -11,14 +11,46 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
-struct CustomRotarySlider : juce::Slider
-{
-	CustomRotarySlider() : juce::Slider(
-		juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag,
-		juce::Slider::TextEntryBoxPosition::NoTextBox)
-	{
+const auto knob_color = juce::Colour(54u, 88u, 114u);
+const auto knob_border_color = juce::Colour(53u, 161u, 154u);
 
+struct LookAndFeel : juce::LookAndFeel_V4
+{
+	void drawRotarySlider(
+		juce::Graphics&,
+		int x, int y, int width, int height,
+		float sliderPosProportional,
+		float rotaryStartAngle,
+		float rotaryEndAngle,
+		juce::Slider&) override;
+};
+
+struct RotarySliderWithLabels : juce::Slider
+{
+	RotarySliderWithLabels(juce::RangedAudioParameter& rap, const juce::String& unitSuffix) :
+		juce::Slider(
+			juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag,
+			juce::Slider::TextEntryBoxPosition::NoTextBox),
+		param(&rap),
+		suffix(unitSuffix)
+	{
+		setLookAndFeel(&lnf);
 	}
+
+	~RotarySliderWithLabels()
+	{
+		setLookAndFeel(nullptr);
+	}
+
+	void paint(juce::Graphics& g) override;
+
+	juce::Rectangle<int> getSliderBounds() const;
+	int getTextHeight() const { return 14; }
+	juce::String getDisplayLabel();
+private:
+	LookAndFeel lnf;
+	juce::RangedAudioParameter* param;
+	juce::String suffix;
 };
 
 struct ResponseCurveComponent : juce::Component,
@@ -68,7 +100,7 @@ private:
 	// access the processor object that created it.
 	SimpleEQAudioProcessor& audioProcessor;
 
-	CustomRotarySlider peakFreqSlider,
+	RotarySliderWithLabels peakFreqSlider,
 		peakGainSlider,
 		peakQualitySlider,
 		lowCutFreqSlider,
