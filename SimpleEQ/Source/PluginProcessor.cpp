@@ -278,7 +278,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::crea
 {
 	const auto freq_range = juce::NormalisableRange<float>(5.f, 22000.f, 1.f, 0.25f);
 	const auto gain_range = juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f);
-	const auto quality_range = juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 0.8f);
+	const auto quality_range = juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f);
 	juce::StringArray filterSlopeValues;
 	for (int i = 0; i < NUM_FILTER_SLOPES; ++i)
 	{
