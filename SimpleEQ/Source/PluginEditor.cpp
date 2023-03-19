@@ -167,28 +167,31 @@ void SimpleEQAudioProcessorEditor::timerCallback()
 {
 	if (parametersChanged.compareAndSetBool(false, true))
 	{
+		auto sampleRate = audioProcessor.getSampleRate();
 		auto chainSettings = getChainSettings(audioProcessor.apvts);
-		auto peakCoefficients = makePeakFilter(chainSettings, audioProcessor.getSampleRate());
-
-		updateCoefficients(monoChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
+		auto peakCoefficients = makePeakFilter(chainSettings, sampleRate);
 
 		auto lowCutCoefficients = makeCutFilter(
 			chainSettings.lowCutFreq,
-			audioProcessor.getSampleRate(),
+			sampleRate,
 			chainSettings.lowCutSlope,
 			lowCutButterworthMethod);
 
 		auto highCutCoefficients = makeCutFilter(
 			chainSettings.highCutFreq,
-			audioProcessor.getSampleRate(),
+			sampleRate,
 			chainSettings.highCutSlope,
 			highCutButterworthMethod);
 
-		auto& lowCut = monoChain.get<ChainPositions::LowCut>();
-		auto& highCut = monoChain.get<ChainPositions::HighCut>();
-
-		applyCoefficientsToCutFilter(lowCut, lowCutCoefficients, chainSettings.lowCutSlope);
-		applyCoefficientsToCutFilter(highCut, highCutCoefficients, chainSettings.highCutSlope);
+		updateCoefficients(monoChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
+		applyCoefficientsToCutFilter(
+			monoChain.get<ChainPositions::LowCut>(),
+			lowCutCoefficients,
+			chainSettings.lowCutSlope);
+		applyCoefficientsToCutFilter(
+			monoChain.get<ChainPositions::HighCut>(),
+			highCutCoefficients,
+			chainSettings.highCutSlope);
 
 		repaint();
 	}
