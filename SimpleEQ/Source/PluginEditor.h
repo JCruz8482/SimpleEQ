@@ -30,7 +30,7 @@ struct RotarySliderWithLabels : juce::Slider
 	RotarySliderWithLabels(
 		juce::RangedAudioParameter& rap,
 		const juce::String& unitSuffix,
-		const juce::Range<double> offRange
+		const juce::Range<float> offRange
 	) :
 		juce::Slider(
 			juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag,
@@ -64,12 +64,12 @@ struct RotarySliderWithLabels : juce::Slider
 
 	juce::Rectangle<int> getSliderBounds() const;
 	int getTextHeight() const { return 14; }
-	juce::String getDisplayLabel();
+	juce::String getDisplayString();
 private:
 	LookAndFeel lnf;
 	juce::RangedAudioParameter* param;
 	juce::String suffix;
-	juce::Range<double> offRange = juce::Range<double>(0, 0);
+	juce::Range<float> offRange = juce::Range<float>(0, 0.01);
 };
 
 struct ResponseCurveComponent : juce::Component,
@@ -97,6 +97,7 @@ struct ResponseCurveComponent : juce::Component,
 private:
 	SimpleEQAudioProcessor& audioProcessor;
 	juce::Atomic<bool> parametersChanged{ false };
+
 
 	MonoChain monoChain;
 };

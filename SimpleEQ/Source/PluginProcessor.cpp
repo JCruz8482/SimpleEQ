@@ -247,31 +247,40 @@ void SimpleEQAudioProcessor::updateFilters()
 {
 	auto chainSettings = getChainSettings(apvts);
 
+	auto lowCutFreq = chainSettings.lowCutFreq;
+	bool isOff = low_cut_off_range.contains(lowCutFreq);
+
 	updateCutFilter<ChainPositions::LowCut>(
 		chainSettings.lowCutFreq,
 		chainSettings.lowCutSlope,
-		lowCutButterworthMethod);
+		lowCutButterworthMethod,
+		isOff);
 
 	updatePeakFilter(chainSettings);
 
+	auto highCutFreq = chainSettings.highCutFreq;
+	isOff = high_cut_off_range.contains(highCutFreq);
+
 	updateCutFilter<ChainPositions::HighCut>(
-		chainSettings.highCutFreq,
+		highCutFreq,
 		chainSettings.highCutSlope,
-		highCutButterworthMethod);
+		highCutButterworthMethod,
+		isOff);
 }
 
 template<int Index> void SimpleEQAudioProcessor::updateCutFilter(
 	const float cutFreq,
 	const Slope slope,
-	CoefficientRefArray(*filterDesignMethod)(float, double, int))
+	CoefficientRefArray(*filterDesignMethod)(float, double, int),
+	const bool isOff)
 {
 	auto cutCoefficients = makeCutFilter(cutFreq, getSampleRate(), slope, filterDesignMethod);
 
 	auto& leftCut = leftChain.get<Index>();
 	auto& rightCut = rightChain.get<Index>();
 
-	applyCoefficientsToCutFilter(leftCut, cutCoefficients, slope);
-	applyCoefficientsToCutFilter(rightCut, cutCoefficients, slope);
+	applyCoefficientsToCutFilter(leftCut, cutCoefficients, slope, isOff);
+	applyCoefficientsToCutFilter(rightCut, cutCoefficients, slope, isOff);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::createParameterLayout()

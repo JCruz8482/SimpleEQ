@@ -10,6 +10,9 @@
 
 #include <JuceHeader.h>
 
+const auto low_cut_off_range = juce::Range<float>(0, 6);
+const auto high_cut_off_range = juce::Range<float>(21500, 22001);
+
 // NUM_FILTER_SLOPES == num entries in Slope == num filters in CutFilter
 const int NUM_FILTER_SLOPES = 8;
 enum Slope
@@ -70,7 +73,8 @@ template<typename ChainType, typename CoefficientType>
 void applyCoefficientsToCutFilter(
 	ChainType& cutFilter,
 	const CoefficientType& cutCoefficients,
-	const Slope slope)
+	const Slope slope,
+	const bool isOff)
 {
 	cutFilter.template setBypassed<0>(true);
 	cutFilter.template setBypassed<1>(true);
@@ -80,6 +84,9 @@ void applyCoefficientsToCutFilter(
 	cutFilter.template setBypassed<5>(true);
 	cutFilter.template setBypassed<6>(true);
 	cutFilter.template setBypassed<7>(true);
+
+	if (isOff)
+		return;
 
 	switch (slope)
 	{
@@ -186,7 +193,8 @@ private:
 	void updateCutFilter(
 		const float cutFreq,
 		const Slope slope,
-		CoefficientRefArray(*filterDesignMethod)(float, double, int));
+		CoefficientRefArray(*filterDesignMethod)(float, double, int),
+		const bool isOff);
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleEQAudioProcessor)
 };

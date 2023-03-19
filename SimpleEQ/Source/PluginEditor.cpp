@@ -53,7 +53,7 @@ void LookAndFeel::drawRotarySlider(
 
 		g.setFont(rswl->getTextHeight());
 
-		auto text = rswl->getDisplayLabel();
+		auto text = rswl->getDisplayString();
 		auto strWidth = g.getCurrentFont().getStringWidth(text);
 
 		r.setSize(strWidth + 4, rswl->getTextHeight() + 2);
@@ -110,12 +110,38 @@ juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const
 	return r;
 }
 
-juce::String RotarySliderWithLabels::getDisplayLabel()
+juce::String RotarySliderWithLabels::getDisplayString()
 {
 	auto value = getValue();
+	if (offRange.contains(value))
+		return "off";
+	if (auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(param))
+		return choiceParam->getCurrentChoiceName();
+
 	juce::String label;
 
-	return offRange.contains(value) ? "off" : juce::String(value);
+	bool addK = false;
+
+	if (auto* floatParam = dynamic_cast<juce::AudioParameterFloat*>(param))
+	{
+		if (value > 999.f)
+		{
+			value /= 1000.f;
+			addK = true;
+		}
+		label = juce::String(value, (addK ? 2 : 0));
+	}
+	else
+	{
+		jassertfalse; // this should never happen
+	}
+
+	label << " ";
+	if (addK)
+		label << "k";
+	label << suffix;
+
+	return label;
 }
 
 ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audioProcessor(p)
@@ -150,15 +176,17 @@ void ResponseCurveComponent::timerCallback()
 		auto sampleRate = audioProcessor.getSampleRate();
 		auto chainSettings = getChainSettings(audioProcessor.apvts);
 		auto peakCoefficients = makePeakFilter(chainSettings, sampleRate);
+		auto lowCutFreq = chainSettings.lowCutFreq;
+		auto highCutFreq = chainSettings.highCutFreq;
 
 		auto lowCutCoefficients = makeCutFilter(
-			chainSettings.lowCutFreq,
+			lowCutFreq,
 			sampleRate,
 			chainSettings.lowCutSlope,
 			lowCutButterworthMethod);
 
 		auto highCutCoefficients = makeCutFilter(
-			chainSettings.highCutFreq,
+			highCutFreq,
 			sampleRate,
 			chainSettings.highCutSlope,
 			highCutButterworthMethod);
@@ -167,11 +195,13 @@ void ResponseCurveComponent::timerCallback()
 		applyCoefficientsToCutFilter(
 			monoChain.get<ChainPositions::LowCut>(),
 			lowCutCoefficients,
-			chainSettings.lowCutSlope);
+			chainSettings.lowCutSlope,
+			low_cut_off_range.contains(lowCutFreq));
 		applyCoefficientsToCutFilter(
 			monoChain.get<ChainPositions::HighCut>(),
 			highCutCoefficients,
-			chainSettings.highCutSlope);
+			chainSettings.highCutSlope,
+			high_cut_off_range.contains(highCutFreq));
 
 		repaint();
 	}
@@ -269,9 +299,9 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
 	peakFreqSlider(*audioProcessor.apvts.getParameter("Peak Freq"), "Hz"),
 	peakGainSlider(*audioProcessor.apvts.getParameter("Peak Gain"), "db"),
 	peakQualitySlider(*audioProcessor.apvts.getParameter("Peak Quality"), ""),
-	lowCutFreqSlider(*audioProcessor.apvts.getParameter("LowCut Freq"), "Hz", juce::Range<double>(0, 6)),
+	lowCutFreqSlider(*audioProcessor.apvts.getParameter("LowCut Freq"), "Hz", low_cut_off_range),
 	lowCutSlopeSlider(*audioProcessor.apvts.getParameter("LowCut Slope"), "db/Oct"),
-	highCutFreqSlider(*audioProcessor.apvts.getParameter("HighCut Freq"), "Hz", juce::Range<double>(21500, 22001)),
+	highCutFreqSlider(*audioProcessor.apvts.getParameter("HighCut Freq"), "Hz", high_cut_off_range),
 	highCutSlopeSlider(*audioProcessor.apvts.getParameter("HighCut Slope"), "db/Oct"),
 
 	responseCurveComponent(audioProcessor),
