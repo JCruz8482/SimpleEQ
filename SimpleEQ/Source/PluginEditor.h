@@ -27,7 +27,25 @@ struct LookAndFeel : juce::LookAndFeel_V4
 
 struct RotarySliderWithLabels : juce::Slider
 {
-	RotarySliderWithLabels(juce::RangedAudioParameter& rap, const juce::String& unitSuffix) :
+	RotarySliderWithLabels(
+		juce::RangedAudioParameter& rap,
+		const juce::String& unitSuffix,
+		const juce::Range<double> offRange
+	) :
+		juce::Slider(
+			juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag,
+			juce::Slider::TextEntryBoxPosition::NoTextBox),
+		param(&rap),
+		suffix(unitSuffix),
+		offRange(offRange)
+	{
+		setLookAndFeel(&lnf);
+	}
+
+	RotarySliderWithLabels(
+		juce::RangedAudioParameter& rap,
+		const juce::String& unitSuffix
+	) :
 		juce::Slider(
 			juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag,
 			juce::Slider::TextEntryBoxPosition::NoTextBox),
@@ -51,6 +69,7 @@ private:
 	LookAndFeel lnf;
 	juce::RangedAudioParameter* param;
 	juce::String suffix;
+	juce::Range<double> offRange = juce::Range<double>(0, 0);
 };
 
 struct ResponseCurveComponent : juce::Component,

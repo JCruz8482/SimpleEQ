@@ -112,7 +112,10 @@ juce::Rectangle<int> RotarySliderWithLabels::getSliderBounds() const
 
 juce::String RotarySliderWithLabels::getDisplayLabel()
 {
-	return juce::String(getValue());
+	auto value = getValue();
+	juce::String label;
+
+	return offRange.contains(value) ? "off" : juce::String(value);
 }
 
 ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audioProcessor(p)
@@ -266,9 +269,9 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
 	peakFreqSlider(*audioProcessor.apvts.getParameter("Peak Freq"), "Hz"),
 	peakGainSlider(*audioProcessor.apvts.getParameter("Peak Gain"), "db"),
 	peakQualitySlider(*audioProcessor.apvts.getParameter("Peak Quality"), ""),
-	lowCutFreqSlider(*audioProcessor.apvts.getParameter("LowCut Freq"), "Hz"),
+	lowCutFreqSlider(*audioProcessor.apvts.getParameter("LowCut Freq"), "Hz", juce::Range<double>(0, 6)),
 	lowCutSlopeSlider(*audioProcessor.apvts.getParameter("LowCut Slope"), "db/Oct"),
-	highCutFreqSlider(*audioProcessor.apvts.getParameter("HighCut Freq"), "Hz"),
+	highCutFreqSlider(*audioProcessor.apvts.getParameter("HighCut Freq"), "Hz", juce::Range<double>(21500, 22001)),
 	highCutSlopeSlider(*audioProcessor.apvts.getParameter("HighCut Slope"), "db/Oct"),
 
 	responseCurveComponent(audioProcessor),
