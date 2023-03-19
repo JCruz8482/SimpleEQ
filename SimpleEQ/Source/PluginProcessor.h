@@ -46,6 +46,14 @@ using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter, Filt
 
 using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
 
+using CoefficientRefArray = juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>;
+
+inline CoefficientRefArray(*lowCutButterworthMethod)(float, double, int) =
+&juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod;
+
+inline CoefficientRefArray(*highCutButterworthMethod)(float, double, int) =
+&juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod;
+
 using Coefficients = Filter::CoefficientsPtr;
 void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
@@ -114,9 +122,9 @@ inline auto makeCutFilter(
 	const float cutFreq,
 	double sampleRate,
 	Slope slope,
-	juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>(*func)(float, double, int))
+	CoefficientRefArray(*filterDesignMethod)(float, double, int))
 {
-	return func(cutFreq, sampleRate, (2 * (slope + 1)));
+	return filterDesignMethod(cutFreq, sampleRate, (2 * (slope + 1)));
 }
 
 //==============================================================================
@@ -178,7 +186,7 @@ private:
 	void updateCutFilter(
 		const float cutFreq,
 		const Slope slope,
-		juce::ReferenceCountedArray<juce::dsp::IIR::Coefficients<float>>(*func)(float, double, int));
+		CoefficientRefArray(*filterDesignMethod)(float, double, int));
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleEQAudioProcessor)
 };

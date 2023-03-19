@@ -27,11 +27,25 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
 	{
 		addAndMakeVisible(comp);
 	}
-	setSize(800, 600);
+
+	const auto& params = audioProcessor.getParameters();
+	for (auto param : params)
+	{
+		param->addListener(this);
+	}
+
+	startTimerHz(60);
+
+	setSize(600, 400);
 }
 
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
 {
+	const auto& params = audioProcessor.getParameters();
+	for (auto param : params)
+	{
+		param->removeListener(this);
+	}
 }
 
 //==============================================================================
@@ -151,11 +165,32 @@ void SimpleEQAudioProcessorEditor::parameterValueChanged(int parameterIndex, flo
 
 void SimpleEQAudioProcessorEditor::timerCallback()
 {
-	if (parametersChanged.compareAndSetBool(false, true));
+	if (parametersChanged.compareAndSetBool(false, true))
 	{
-		// update mono chain
-		// signal a repaint
+		auto chainSettings = getChainSettings(audioProcessor.apvts);
+		auto peakCoefficients = makePeakFilter(chainSettings, audioProcessor.getSampleRate());
 
+		updateCoefficients(monoChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
+
+		auto lowCutCoefficients = makeCutFilter(
+			chainSettings.lowCutFreq,
+			audioProcessor.getSampleRate(),
+			chainSettings.lowCutSlope,
+			lowCutButterworthMethod);
+
+		auto highCutCoefficients = makeCutFilter(
+			chainSettings.highCutFreq,
+			audioProcessor.getSampleRate(),
+			chainSettings.highCutSlope,
+			highCutButterworthMethod);
+
+		auto& lowCut = monoChain.get<ChainPositions::LowCut>();
+		auto& highCut = monoChain.get<ChainPositions::HighCut>();
+
+		applyCoefficientsToCutFilter(lowCut, lowCutCoefficients, chainSettings.lowCutSlope);
+		applyCoefficientsToCutFilter(highCut, highCutCoefficients, chainSettings.highCutSlope);
+
+		repaint();
 	}
 }
 
