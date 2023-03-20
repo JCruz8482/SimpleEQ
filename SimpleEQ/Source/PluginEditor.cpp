@@ -362,17 +362,45 @@ void ResponseCurveComponent::resized()
 		g.fillRect(x, float(top), 0.8f, float(bottom) - float(top));
 	}
 
+	const int fontHeight = 10;
+	g.setFont(fontHeight);
+
 	for (float i = -24; i <= 24; i += 6)
 	{
 		// fill horizontal gain lines
 		auto y = jmap(i, -24.f, 24.f, float(bottom), float(top));
-		g.setColour(i == 0.f ? Colours::darkred : Colours::darkgrey);
+		g.setColour(i == 0.f ? zero_db_color : Colours::darkgrey);
 		g.fillRect(float(left), y, float(right) - float(left), 0.8f);
+
+
+		// fill gain label
+		String str;
+		if (i > 0)
+			str << "+";
+		str << i;
+
+		auto textWidth = g.getCurrentFont().getStringWidth(str);
+
+		Rectangle<int> r;
+		r.setSize(textWidth, fontHeight);
+
+		r.setX(getWidth() - textWidth);
+		r.setCentre(r.getCentreX(), y);
+
+		g.setColour(i == 0 ? zero_db_color : Colours::lightgrey);
+		g.drawFittedText(str, r, juce::Justification::centred, 1);
+
+		str.clear();
+		str << (i - 24.f);
+
+		r.setX(1);
+		textWidth = g.getCurrentFont().getStringWidth(str);
+		r.setSize(textWidth, fontHeight);
+		g.drawFittedText(str, r, juce::Justification::right, 1);
+
 	}
 
 	g.setColour(Colours::lightgrey);
-	const int fontHeight = 10;
-	g.setFont(fontHeight);
 
 	for (int i = 0; i < freqs.size(); ++i)
 	{
@@ -399,7 +427,10 @@ void ResponseCurveComponent::resized()
 		r.setCentre(x, 0);
 		r.setY(1);
 
+		// write frequencies at top
 		g.drawFittedText(str, r, juce::Justification::centred, 1);
+
+		// write frequencies at bottom
 		r.setCentre(x, getRenderedArea().getBottom());
 		g.drawFittedText(str, r, juce::Justification::centred, 1);
 	}
@@ -410,7 +441,7 @@ juce::Rectangle<int> ResponseCurveComponent::getRenderedArea()
 	auto bounds = getLocalBounds();
 	bounds.removeFromTop(12);
 
-	bounds.removeFromBottom(2);
+	bounds.removeFromBottom(10);
 	bounds.removeFromLeft(20);
 	bounds.removeFromRight(20);
 

@@ -13,6 +13,7 @@
 
 const auto knob_color = juce::Colour(54u, 88u, 114u);
 const auto knob_border_color = juce::Colour(53u, 161u, 154u);
+const auto zero_db_color = juce::Colour(50u, 172u, 1u);
 
 struct LookAndFeel : juce::LookAndFeel_V4
 {
