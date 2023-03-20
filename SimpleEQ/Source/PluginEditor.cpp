@@ -266,7 +266,7 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 	for (int i = 0; i < w; ++i)
 	{
 		double mag = 1.f;
-		auto freq = mapToLog10(double(i) / double(w), 20.0, 20000.0);
+		auto freq = mapToLog10(double(i) / double(w), 10.0, 20000.0);
 
 		if (!monoChain.isBypassed<ChainPositions::Peak>())
 			mag *= peak.coefficients->getMagnitudeForFrequency(freq, sampleRate);
@@ -323,7 +323,7 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 		responseCurve.lineTo(responseArea.getX() + i, map(mags[i]));
 
 	g.setColour(Colours::orange);
-	g.drawRoundedRectangle(getRenderedArea().toFloat(), 4.f, 1.f);
+	g.drawRoundedRectangle(getAnalysisArea().toFloat(), 4.f, 1.f);
 
 	g.setColour(knob_border_color);
 	g.strokePath(responseCurve, PathStrokeType(3.2f));
@@ -338,7 +338,7 @@ void ResponseCurveComponent::resized()
 
 	Array<float> freqs
 	{
-		20, 30, 40, 50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000, 10000, 20000
+		10, 20, 50, 100, 200, 300, 500, 1000, 2000, 5000, 10000, 20000
 	};
 
 	auto renderArea = getAnalysisArea();
@@ -351,7 +351,7 @@ void ResponseCurveComponent::resized()
 	Array<float> xs;
 	for (auto f : freqs)
 	{
-		auto normX = mapFromLog10(f, 20.f, 20000.f);
+		auto normX = mapFromLog10(f, 10.f, 20000.f);
 		xs.add(left + width * normX);
 	}
 
@@ -359,7 +359,7 @@ void ResponseCurveComponent::resized()
 	for (auto x : xs)
 	{
 		// fill vertical frequency lines
-		g.fillRect(x, float(top), 0.8f, float(bottom));
+		g.fillRect(x, float(top), 0.8f, float(bottom) - float(top));
 	}
 
 	for (float i = -24; i <= 24; i += 6)
@@ -368,6 +368,40 @@ void ResponseCurveComponent::resized()
 		auto y = jmap(i, -24.f, 24.f, float(bottom), float(top));
 		g.setColour(i == 0.f ? Colours::darkred : Colours::darkgrey);
 		g.fillRect(float(left), y, float(right) - float(left), 0.8f);
+	}
+
+	g.setColour(Colours::lightgrey);
+	const int fontHeight = 10;
+	g.setFont(fontHeight);
+
+	for (int i = 0; i < freqs.size(); ++i)
+	{
+		auto f = freqs[i];
+		auto x = xs[i];
+
+		bool addK = false;
+		String str;
+		if (f > 999.f)
+		{
+			addK = true;
+			f /= 1000.f;
+		}
+
+		str << f;
+		if (addK)
+			str << "k";
+		str << "Hz";
+
+		auto textWidth = g.getCurrentFont().getStringWidth(str);
+
+		Rectangle<int> r;
+		r.setSize(textWidth, fontHeight);
+		r.setCentre(x, 0);
+		r.setY(1);
+
+		g.drawFittedText(str, r, juce::Justification::centred, 1);
+		r.setCentre(x, getRenderedArea().getBottom());
+		g.drawFittedText(str, r, juce::Justification::centred, 1);
 	}
 }
 
@@ -386,8 +420,8 @@ juce::Rectangle<int> ResponseCurveComponent::getRenderedArea()
 juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea()
 {
 	auto bounds = getRenderedArea();
-	bounds.removeFromTop(4);
-	bounds.removeFromBottom(4);
+	bounds.removeFromTop(5);
+	bounds.removeFromBottom(10);
 
 	return bounds;
 }
