@@ -182,6 +182,7 @@ ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audi
 	}
 
 	startTimerHz(60);
+	updateChain();
 }
 
 ResponseCurveComponent::~ResponseCurveComponent()
@@ -198,40 +199,45 @@ void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float new
 	parametersChanged.set(true);
 }
 
+void ResponseCurveComponent::updateChain()
+{
+	auto sampleRate = audioProcessor.getSampleRate();
+	auto chainSettings = getChainSettings(audioProcessor.apvts);
+	auto peakCoefficients = makePeakFilter(chainSettings, sampleRate);
+	auto lowCutFreq = chainSettings.lowCutFreq;
+	auto highCutFreq = chainSettings.highCutFreq;
+
+	auto lowCutCoefficients = makeCutFilter(
+		lowCutFreq,
+		sampleRate,
+		chainSettings.lowCutSlope,
+		lowCutButterworthMethod);
+
+	auto highCutCoefficients = makeCutFilter(
+		highCutFreq,
+		sampleRate,
+		chainSettings.highCutSlope,
+		highCutButterworthMethod);
+
+	updateCoefficients(monoChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
+	applyCoefficientsToCutFilter(
+		monoChain.get<ChainPositions::LowCut>(),
+		lowCutCoefficients,
+		chainSettings.lowCutSlope,
+		low_cut_off_range.contains(lowCutFreq));
+	applyCoefficientsToCutFilter(
+		monoChain.get<ChainPositions::HighCut>(),
+		highCutCoefficients,
+		chainSettings.highCutSlope,
+		high_cut_off_range.contains(highCutFreq));
+
+}
+
 void ResponseCurveComponent::timerCallback()
 {
 	if (parametersChanged.compareAndSetBool(false, true))
 	{
-		auto sampleRate = audioProcessor.getSampleRate();
-		auto chainSettings = getChainSettings(audioProcessor.apvts);
-		auto peakCoefficients = makePeakFilter(chainSettings, sampleRate);
-		auto lowCutFreq = chainSettings.lowCutFreq;
-		auto highCutFreq = chainSettings.highCutFreq;
-
-		auto lowCutCoefficients = makeCutFilter(
-			lowCutFreq,
-			sampleRate,
-			chainSettings.lowCutSlope,
-			lowCutButterworthMethod);
-
-		auto highCutCoefficients = makeCutFilter(
-			highCutFreq,
-			sampleRate,
-			chainSettings.highCutSlope,
-			highCutButterworthMethod);
-
-		updateCoefficients(monoChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
-		applyCoefficientsToCutFilter(
-			monoChain.get<ChainPositions::LowCut>(),
-			lowCutCoefficients,
-			chainSettings.lowCutSlope,
-			low_cut_off_range.contains(lowCutFreq));
-		applyCoefficientsToCutFilter(
-			monoChain.get<ChainPositions::HighCut>(),
-			highCutCoefficients,
-			chainSettings.highCutSlope,
-			high_cut_off_range.contains(highCutFreq));
-
+		updateChain();
 		repaint();
 	}
 }
@@ -376,10 +382,13 @@ void SimpleEQAudioProcessorEditor::resized()
 	// subcomponents in your editor..
 
 	auto bounds = getLocalBounds();
-	auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.33);
+
+	//float heightRatio = JUCE_LIVE_CONSTANT(33) / 100.f;
+	auto responseArea = bounds.removeFromTop(bounds.getHeight() * 0.4);
 
 	responseCurveComponent.setBounds(responseArea);
 
+	bounds.removeFromTop(10);
 	auto lowCutArea = bounds.removeFromLeft(bounds.getWidth() * 0.33);
 	auto highCutArea = bounds.removeFromRight(bounds.getWidth() * 0.5);
 
