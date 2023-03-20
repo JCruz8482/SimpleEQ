@@ -248,8 +248,9 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 
 	// (Our component is opaque, so we must completely fill the background with a solid colour)
 	g.fillAll(Colours::black);
+	g.drawImage(background, getLocalBounds().toFloat());
 
-	auto responseArea = getLocalBounds();
+	auto responseArea = getAnalysisArea();
 	auto w = responseArea.getWidth();
 
 	auto& lowCut = monoChain.get<ChainPositions::LowCut>();
@@ -322,10 +323,73 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 		responseCurve.lineTo(responseArea.getX() + i, map(mags[i]));
 
 	g.setColour(Colours::orange);
-	g.drawRoundedRectangle(responseArea.toFloat(), 4.f, 1.f);
+	g.drawRoundedRectangle(getRenderedArea().toFloat(), 4.f, 1.f);
 
-	g.setColour(Colours::white);
-	g.strokePath(responseCurve, PathStrokeType(2.f));
+	g.setColour(knob_border_color);
+	g.strokePath(responseCurve, PathStrokeType(3.2f));
+}
+
+void ResponseCurveComponent::resized()
+{
+	using namespace juce;
+	background = Image(Image::PixelFormat::RGB, getWidth(), getHeight(), true);
+
+	Graphics g(background);
+
+	Array<float> freqs
+	{
+		20, 30, 40, 50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000, 10000, 20000
+	};
+
+	auto renderArea = getAnalysisArea();
+	auto left = renderArea.getX();
+	auto right = renderArea.getRight();
+	auto top = renderArea.getY();
+	auto bottom = renderArea.getBottom();
+	auto width = renderArea.getWidth();
+
+	Array<float> xs;
+	for (auto f : freqs)
+	{
+		auto normX = mapFromLog10(f, 20.f, 20000.f);
+		xs.add(left + width * normX);
+	}
+
+	g.setColour(Colours::dimgrey);
+	for (auto x : xs)
+	{
+		// fill vertical frequency lines
+		g.fillRect(x, float(top), 0.8f, float(bottom));
+	}
+
+	for (float i = -24; i <= 24; i += 6)
+	{
+		// fill horizontal gain lines
+		auto y = jmap(i, -24.f, 24.f, float(bottom), float(top));
+		g.setColour(i == 0.f ? Colours::darkred : Colours::darkgrey);
+		g.fillRect(float(left), y, float(right) - float(left), 0.8f);
+	}
+}
+
+juce::Rectangle<int> ResponseCurveComponent::getRenderedArea()
+{
+	auto bounds = getLocalBounds();
+	bounds.removeFromTop(12);
+
+	bounds.removeFromBottom(2);
+	bounds.removeFromLeft(20);
+	bounds.removeFromRight(20);
+
+	return bounds;
+}
+
+juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea()
+{
+	auto bounds = getRenderedArea();
+	bounds.removeFromTop(4);
+	bounds.removeFromBottom(4);
+
+	return bounds;
 }
 
 //==============================================================================
