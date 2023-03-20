@@ -173,7 +173,9 @@ juce::String RotarySliderWithLabels::getDisplayString()
 	return label;
 }
 
-ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audioProcessor(p)
+ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) :
+	audioProcessor(p),
+	leftChannelFifo(&audioProcessor.leftChannelFifo)
 {
 	const auto& params = audioProcessor.getParameters();
 	for (auto param : params)
@@ -181,8 +183,10 @@ ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audi
 		param->addListener(this);
 	}
 
-	startTimerHz(60);
+
+
 	updateChain();
+	startTimerHz(60);
 }
 
 ResponseCurveComponent::~ResponseCurveComponent()
@@ -235,6 +239,25 @@ void ResponseCurveComponent::updateChain()
 
 void ResponseCurveComponent::timerCallback()
 {
+	juce::AudioBuffer<float> tempIncomingBuffer;
+
+	while (leftChannelFifo->getNumCompleteBuffersAvailable() > 0)
+	{
+		if (leftChannelFifo->getAudioBuffer(tempIncomingBuffer))
+		{
+			//auto size = tempIncomingBuffer.getNumSamples();
+			//juce::FloatVectorOperations::copy(
+			//	monoBuffer.getWritePointer(0, 0),
+			//	monoBuffer.getReadPointer(0, size),
+			//	monoBuffer.getNumSamples() - size);
+
+			//juce::FloatVectorOperations::copy(
+			//	monoBuffer.getWritePointer(0, monoBuffer.getNumSamples() - size),
+			//	tempIncomingBuffer.getReadPointer(0, 0),
+			//	size);
+		}
+	}
+
 	if (parametersChanged.compareAndSetBool(false, true))
 	{
 		updateChain();
