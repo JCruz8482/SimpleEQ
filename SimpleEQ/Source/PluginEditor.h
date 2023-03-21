@@ -14,7 +14,8 @@
 const auto knob_color = juce::Colour(54u, 88u, 114u);
 const auto knob_border_color = juce::Colour(53u, 161u, 154u);
 const auto zero_db_color = juce::Colour(50u, 172u, 1u);
-const auto response_curve_color = juce::Colours::blue;
+const auto atually_right_response_curve_color = juce::Colours::mediumpurple;
+const auto right_response_curve_color = juce::Colours::indianred;
 const auto analyzer_border_color = juce::Colours::orange;
 
 enum FFTOrder
@@ -233,6 +234,25 @@ private:
 	juce::Range<float> offRange = juce::Range<float>(0, 0.01);
 };
 
+struct PathProducer
+{
+	PathProducer(SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>& scsf) :
+		fifo(&scsf)
+	{
+		fftDataGenerator.changeOrder(FFTOrder::order2048);
+		monoBuffer.setSize(1, fftDataGenerator.getFFTSize());
+	}
+
+	void process(juce::Rectangle<float> fftBounds, double sampleRate);
+	juce::Path getPath() { return fftPath; }
+private:
+	SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>* fifo;
+	juce::AudioBuffer<float> monoBuffer;
+	FFTDataGenerator<std::vector<float>> fftDataGenerator;
+	AnalyzerPathGenerator<juce::Path> pathProducer;
+	juce::Path fftPath;
+};
+
 struct ResponseCurveComponent : juce::Component,
 	juce::AudioProcessorParameter::Listener,
 	juce::Timer
@@ -272,15 +292,7 @@ private:
 
 	juce::Rectangle<int> getAnalysisArea();
 
-	SingleChannelSampleFifo<SimpleEQAudioProcessor::BlockType>* leftChannelFifo;
-
-	juce::AudioBuffer<float> monoBuffer;
-
-	FFTDataGenerator<std::vector<float>> leftChannelFFTDataGenerator;
-
-	AnalyzerPathGenerator<juce::Path> pathProducer;
-
-	juce::Path leftChannelFFTPath;
+	PathProducer leftPathProducer, rightPathProducer;
 };
 
 //==============================================================================
