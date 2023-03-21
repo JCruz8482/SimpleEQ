@@ -14,6 +14,8 @@
 const auto knob_color = juce::Colour(54u, 88u, 114u);
 const auto knob_border_color = juce::Colour(53u, 161u, 154u);
 const auto zero_db_color = juce::Colour(50u, 172u, 1u);
+const auto response_curve_color = juce::Colours::blue;
+const auto analyzer_border_color = juce::Colours::orange;
 
 enum FFTOrder
 {
@@ -99,6 +101,71 @@ private:
 	Fifo<BlockType> fftDataFifo;
 };
 
+template<typename PathType>
+struct AnalyzerPathGenerator
+{
+	/*
+	 converts 'renderData[]' into a juce::Path
+	 */
+	void generatePath(const std::vector<float>& renderData,
+		juce::Rectangle<float> fftBounds,
+		int fftSize,
+		float binWidth,
+		float negativeInfinity)
+	{
+		auto top = fftBounds.getY();
+		auto bottom = fftBounds.getHeight();
+		auto width = fftBounds.getWidth();
+
+		int numBins = (int)fftSize / 2;
+
+		PathType p;
+		p.preallocateSpace(3 * (int)fftBounds.getWidth());
+
+		auto map = [bottom, top, negativeInfinity](float v)
+		{
+			return juce::jmap(v,
+				negativeInfinity, 0.f,
+				float(bottom + 10), top);
+		};
+
+		auto y = map(renderData[0]);
+
+		if (std::isnan(y) || std::isinf(y))
+			y = bottom;
+
+		p.startNewSubPath(0, y);
+
+		const int pathResolution = 2; //you can draw line-to's every 'pathResolution' pixels.
+
+		for (int binNum = 1; binNum < numBins; binNum += pathResolution)
+		{
+			y = map(renderData[binNum]);
+
+			if (!std::isnan(y) && !std::isinf(y))
+			{
+				auto binFreq = binNum * binWidth;
+				auto normalizedBinX = juce::mapFromLog10(binFreq, 10.f, 20000.f);
+				int binX = std::floor(normalizedBinX * width);
+				p.lineTo(binX, y);
+			}
+		}
+
+		pathFifo.push(p);
+	}
+
+	int getNumPathsAvailable() const
+	{
+		return pathFifo.getNumAvailableForReading();
+	}
+
+	bool getPath(PathType& path)
+	{
+		return pathFifo.pull(path);
+	}
+private:
+	Fifo<PathType> pathFifo;
+};
 
 struct LookAndFeel : juce::LookAndFeel_V4
 {
@@ -210,6 +277,10 @@ private:
 	juce::AudioBuffer<float> monoBuffer;
 
 	FFTDataGenerator<std::vector<float>> leftChannelFFTDataGenerator;
+
+	AnalyzerPathGenerator<juce::Path> pathProducer;
+
+	juce::Path leftChannelFFTPath;
 };
 
 //==============================================================================

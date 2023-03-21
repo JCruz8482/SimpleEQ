@@ -183,7 +183,8 @@ ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) :
 		param->addListener(this);
 	}
 
-
+	leftChannelFFTDataGenerator.changeOrder(FFTOrder::order2048);
+	monoBuffer.setSize(1, leftChannelFFTDataGenerator.getFFTSize());
 
 	updateChain();
 	startTimerHz(60);
@@ -245,17 +246,37 @@ void ResponseCurveComponent::timerCallback()
 	{
 		if (leftChannelFifo->getAudioBuffer(tempIncomingBuffer))
 		{
-			//auto size = tempIncomingBuffer.getNumSamples();
-			//juce::FloatVectorOperations::copy(
-			//	monoBuffer.getWritePointer(0, 0),
-			//	monoBuffer.getReadPointer(0, size),
-			//	monoBuffer.getNumSamples() - size);
+			auto size = tempIncomingBuffer.getNumSamples();
+			juce::FloatVectorOperations::copy(
+				monoBuffer.getWritePointer(0, 0),
+				monoBuffer.getReadPointer(0, size),
+				monoBuffer.getNumSamples() - size);
 
-			//juce::FloatVectorOperations::copy(
-			//	monoBuffer.getWritePointer(0, monoBuffer.getNumSamples() - size),
-			//	tempIncomingBuffer.getReadPointer(0, 0),
-			//	size);
+			juce::FloatVectorOperations::copy(
+				monoBuffer.getWritePointer(0, monoBuffer.getNumSamples() - size),
+				tempIncomingBuffer.getReadPointer(0, 0),
+				size);
+
+			leftChannelFFTDataGenerator.produceFFTDataForRendering(monoBuffer, -48.f);
 		}
+	}
+
+	const auto fftBounds = getAnalysisArea().toFloat();
+	const auto fftSize = leftChannelFFTDataGenerator.getFFTSize();
+
+	const auto binWidth = audioProcessor.getSampleRate() / (double)fftSize;
+	while (leftChannelFFTDataGenerator.getNumAvailableFFTDataBlocks() > 0)
+	{
+		std::vector<float> fftData;
+		if (leftChannelFFTDataGenerator.getFFTData(fftData))
+		{
+			pathProducer.generatePath(fftData, fftBounds, fftSize, binWidth, -48.f);
+		}
+	}
+
+	while (pathProducer.getNumPathsAvailable())
+	{
+		pathProducer.getPath(leftChannelFFTPath);
 	}
 
 	if (parametersChanged.compareAndSetBool(false, true))
@@ -263,6 +284,8 @@ void ResponseCurveComponent::timerCallback()
 		updateChain();
 		repaint();
 	}
+
+	repaint();
 }
 
 void ResponseCurveComponent::paint(juce::Graphics& g)
@@ -345,7 +368,12 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 	for (size_t i = 1; i < mags.size(); ++i)
 		responseCurve.lineTo(responseArea.getX() + i, map(mags[i]));
 
-	g.setColour(Colours::orange);
+	leftChannelFFTPath.applyTransform(AffineTransform().translation(responseArea.getX(), responseArea.getY() - 10));
+
+	g.setColour(response_curve_color);
+	g.strokePath(leftChannelFFTPath, PathStrokeType(0.8f));
+
+	g.setColour(analyzer_border_color);
 	g.drawRoundedRectangle(getAnalysisArea().toFloat(), 4.f, 1.f);
 
 	g.setColour(knob_border_color);
@@ -512,7 +540,7 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcesso
 		addAndMakeVisible(comp);
 	}
 
-	setSize(600, 600);
+	setSize(600, 500);
 }
 
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
