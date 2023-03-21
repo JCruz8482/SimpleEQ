@@ -245,6 +245,9 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
 	settings.peakQuality = apvts.getRawParameterValue("Peak Quality")->load();
 	settings.lowCutSlope = static_cast<Slope>(apvts.getRawParameterValue("LowCut Slope")->load());
 	settings.highCutSlope = static_cast<Slope>(apvts.getRawParameterValue("HighCut Slope")->load());
+	settings.lowCutBypassed = apvts.getRawParameterValue("LowCut Bypassed")->load();
+	settings.highCutBypassed = apvts.getRawParameterValue("HighCut Bypassed")->load();
+	settings.peakBypassed = apvts.getRawParameterValue("Peak Bypassed")->load();
 
 	return settings;
 }
@@ -255,6 +258,13 @@ void SimpleEQAudioProcessor::updateFilters()
 
 	auto lowCutFreq = chainSettings.lowCutFreq;
 	bool isOff = low_cut_off_range.contains(lowCutFreq);
+
+	leftChain.setBypassed<ChainPositions::LowCut>(chainSettings.lowCutBypassed);
+	rightChain.setBypassed<ChainPositions::LowCut>(chainSettings.lowCutBypassed);
+	leftChain.setBypassed<ChainPositions::HighCut>(chainSettings.highCutBypassed);
+	rightChain.setBypassed<ChainPositions::HighCut>(chainSettings.highCutBypassed);
+	leftChain.setBypassed<ChainPositions::Peak>(chainSettings.peakBypassed);
+	rightChain.setBypassed<ChainPositions::Peak>(chainSettings.peakBypassed);
 
 	updateCutFilter<ChainPositions::LowCut>(
 		chainSettings.lowCutFreq,
@@ -339,6 +349,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::crea
 		("LowCut Slope", "LowCut Slope", filterSlopeValues, 0));
 	layout.add(std::make_unique<juce::AudioParameterChoice>(
 		"HighCut Slope", "HighCut Slope", filterSlopeValues, 0));
+
+	layout.add(std::make_unique<juce::AudioParameterBool>("LowCut Bypassed", "LowCut Bypassed", false));
+	layout.add(std::make_unique<juce::AudioParameterBool>("Peak Bypassed", "Peak Bypassed", false));
+	layout.add(std::make_unique<juce::AudioParameterBool>("HighCut Bypassed", "High Cut Bypassed", false));
+	layout.add(std::make_unique<juce::AudioParameterBool>("Analyzer Bypassed", "Analyzer Bypassed", true));
 
 	return layout;
 }
