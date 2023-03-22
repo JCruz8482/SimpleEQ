@@ -206,7 +206,39 @@ void ResponseCurveComponent::updateChain()
 {
 	auto sampleRate = audioProcessor.getSampleRate();
 	auto chainSettings = getChainSettings(audioProcessor.apvts);
-	auto peakCoefficients = makePeakFilter(chainSettings, sampleRate);
+
+	auto peak1Coefficients = makePeakFilter(
+		chainSettings.peak1Freq,
+		chainSettings.peak1Quality,
+		chainSettings.peak1GainInDecibels,
+		sampleRate);
+	auto peak2Coefficients = makePeakFilter(
+		chainSettings.peak2Freq,
+		chainSettings.peak2Quality,
+		chainSettings.peak2GainInDecibels,
+		sampleRate);
+	auto peak3Coefficients = makePeakFilter(
+		chainSettings.peak3Freq,
+		chainSettings.peak3Quality,
+		chainSettings.peak3GainInDecibels,
+		sampleRate);
+	auto peak4Coefficients = makePeakFilter(
+		chainSettings.peak4Freq,
+		chainSettings.peak4Quality,
+		chainSettings.peak4GainInDecibels,
+		sampleRate);
+	auto peak5Coefficients = makePeakFilter(
+		chainSettings.peak5Freq,
+		chainSettings.peak5Quality,
+		chainSettings.peak5GainInDecibels,
+		sampleRate);
+
+	updateCoefficients(monoChain.get<ChainPositions::Peak1>().coefficients, peak1Coefficients);
+	updateCoefficients(monoChain.get<ChainPositions::Peak2>().coefficients, peak2Coefficients);
+	updateCoefficients(monoChain.get<ChainPositions::Peak3>().coefficients, peak3Coefficients);
+	updateCoefficients(monoChain.get<ChainPositions::Peak4>().coefficients, peak4Coefficients);
+	updateCoefficients(monoChain.get<ChainPositions::Peak5>().coefficients, peak5Coefficients);
+
 	auto lowCutFreq = chainSettings.lowCutFreq;
 	auto highCutFreq = chainSettings.highCutFreq;
 
@@ -222,7 +254,6 @@ void ResponseCurveComponent::updateChain()
 		chainSettings.highCutSlope,
 		highCutButterworthMethod);
 
-	updateCoefficients(monoChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
 	applyCoefficientsToCutFilter(
 		monoChain.get<ChainPositions::LowCut>(),
 		lowCutCoefficients,
@@ -306,7 +337,7 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 	auto w = responseArea.getWidth();
 
 	auto& lowCut = monoChain.get<ChainPositions::LowCut>();
-	auto& peak = monoChain.get<ChainPositions::Peak>();
+	auto& peak = monoChain.get<ChainPositions::Peak1>();
 	auto& highCut = monoChain.get<ChainPositions::HighCut>();
 
 	auto sampleRate = audioProcessor.getSampleRate();
@@ -320,7 +351,7 @@ void ResponseCurveComponent::paint(juce::Graphics& g)
 		double mag = 1.f;
 		auto freq = mapToLog10(double(i) / double(w), 10.0, 20000.0);
 
-		if (!monoChain.isBypassed<ChainPositions::Peak>())
+		if (!monoChain.isBypassed<ChainPositions::Peak1>())
 			mag *= peak.coefficients->getMagnitudeForFrequency(freq, sampleRate);
 
 		if (!lowCut.isBypassed<0>())
@@ -522,18 +553,42 @@ juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea()
 //==============================================================================
 SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor(SimpleEQAudioProcessor& p)
 	: AudioProcessorEditor(&p), audioProcessor(p),
-	peakFreqSlider(*audioProcessor.apvts.getParameter("Peak Freq"), "Hz"),
-	peakGainSlider(*audioProcessor.apvts.getParameter("Peak Gain"), "db"),
-	peakQualitySlider(*audioProcessor.apvts.getParameter("Peak Quality"), ""),
+	peak1FreqSlider(*audioProcessor.apvts.getParameter("Peak1 Freq"), "Hz"),
+	peak1GainSlider(*audioProcessor.apvts.getParameter("Peak1 Gain"), "db"),
+	peak1QualitySlider(*audioProcessor.apvts.getParameter("Peak1 Quality"), ""),
+	peak2FreqSlider(*audioProcessor.apvts.getParameter("Peak2 Freq"), "Hz"),
+	peak2GainSlider(*audioProcessor.apvts.getParameter("Peak2 Gain"), "db"),
+	peak2QualitySlider(*audioProcessor.apvts.getParameter("Peak2 Quality"), ""),
+	peak3FreqSlider(*audioProcessor.apvts.getParameter("Peak3 Freq"), "Hz"),
+	peak3GainSlider(*audioProcessor.apvts.getParameter("Peak3 Gain"), "db"),
+	peak3QualitySlider(*audioProcessor.apvts.getParameter("Peak3 Quality"), ""),
+	peak4FreqSlider(*audioProcessor.apvts.getParameter("Peak4 Freq"), "Hz"),
+	peak4GainSlider(*audioProcessor.apvts.getParameter("Peak4 Gain"), "db"),
+	peak4QualitySlider(*audioProcessor.apvts.getParameter("Peak4 Quality"), ""),
+	peak5FreqSlider(*audioProcessor.apvts.getParameter("Peak5 Freq"), "Hz"),
+	peak5GainSlider(*audioProcessor.apvts.getParameter("Peak5 Gain"), "db"),
+	peak5QualitySlider(*audioProcessor.apvts.getParameter("Peak5 Quality"), ""),
 	lowCutFreqSlider(*audioProcessor.apvts.getParameter("LowCut Freq"), "Hz", low_cut_off_range),
 	lowCutSlopeSlider(*audioProcessor.apvts.getParameter("LowCut Slope"), "db/Oct"),
 	highCutFreqSlider(*audioProcessor.apvts.getParameter("HighCut Freq"), "Hz", high_cut_off_range),
 	highCutSlopeSlider(*audioProcessor.apvts.getParameter("HighCut Slope"), "db/Oct"),
 
 	responseCurveComponent(audioProcessor),
-	peakFreqSliderAttachment(audioProcessor.apvts, "Peak Freq", peakFreqSlider),
-	peakGainSliderAttachment(audioProcessor.apvts, "Peak Gain", peakGainSlider),
-	peakQualitySliderAttachment(audioProcessor.apvts, "Peak Quality", peakQualitySlider),
+	peak1FreqSliderAttachment(audioProcessor.apvts, "Peak1 Freq", peak1FreqSlider),
+	peak1GainSliderAttachment(audioProcessor.apvts, "Peak1 Gain", peak1GainSlider),
+	peak1QualitySliderAttachment(audioProcessor.apvts, "Peak1 Quality", peak1QualitySlider),
+	peak2FreqSliderAttachment(audioProcessor.apvts, "Peak2 Freq", peak2FreqSlider),
+	peak2GainSliderAttachment(audioProcessor.apvts, "Peak2 Gain", peak2GainSlider),
+	peak2QualitySliderAttachment(audioProcessor.apvts, "Peak2 Quality", peak2QualitySlider),
+	peak3FreqSliderAttachment(audioProcessor.apvts, "Peak3 Freq", peak3FreqSlider),
+	peak3GainSliderAttachment(audioProcessor.apvts, "Peak3 Gain", peak3GainSlider),
+	peak3QualitySliderAttachment(audioProcessor.apvts, "Peak3 Quality", peak3QualitySlider),
+	peak4FreqSliderAttachment(audioProcessor.apvts, "Peak4 Freq", peak4FreqSlider),
+	peak4GainSliderAttachment(audioProcessor.apvts, "Peak4 Gain", peak4GainSlider),
+	peak4QualitySliderAttachment(audioProcessor.apvts, "Peak4 Quality", peak4QualitySlider),
+	peak5FreqSliderAttachment(audioProcessor.apvts, "Peak5 Freq", peak5FreqSlider),
+	peak5GainSliderAttachment(audioProcessor.apvts, "Peak5 Gain", peak5GainSlider),
+	peak5QualitySliderAttachment(audioProcessor.apvts, "Peak5 Quality", peak5QualitySlider),
 	lowCutFreqSliderAttachment(audioProcessor.apvts, "LowCut Freq", lowCutFreqSlider),
 	highCutFreqSliderAttachment(audioProcessor.apvts, "HighCut Freq", highCutFreqSlider),
 	lowCutSlopeSliderAttachment(audioProcessor.apvts, "LowCut Slope", lowCutSlopeSlider),
@@ -592,9 +647,25 @@ void SimpleEQAudioProcessorEditor::resized()
 	highCutSlopeSlider.setBounds(highCutArea);
 
 	peakBypassButton.setBounds(bounds.removeFromTop(25));
-	peakFreqSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
-	peakGainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.5));
-	peakQualitySlider.setBounds(bounds);
+	peak1FreqSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
+	peak1GainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.5));
+	peak1QualitySlider.setBounds(bounds);
+
+	peak2FreqSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
+	peak2GainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.5));
+	peak2QualitySlider.setBounds(bounds);
+
+	peak3FreqSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
+	peak3GainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.5));
+	peak3QualitySlider.setBounds(bounds);
+
+	peak4FreqSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
+	peak4GainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.5));
+	peak4QualitySlider.setBounds(bounds);
+
+	peak5FreqSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.33));
+	peak5GainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * 0.5));
+	peak5QualitySlider.setBounds(bounds);
 
 	//analyzerBypassButton.setBounds(bounds);
 }
@@ -603,9 +674,21 @@ std::vector<juce::Component*> SimpleEQAudioProcessorEditor::getComps()
 {
 	return
 	{
-		&peakFreqSlider,
-		&peakGainSlider,
-		&peakQualitySlider,
+		&peak1FreqSlider,
+		&peak1GainSlider,
+		&peak1QualitySlider,
+		&peak2FreqSlider,
+		&peak2GainSlider,
+		&peak2QualitySlider,
+		&peak3FreqSlider,
+		&peak3GainSlider,
+		&peak3QualitySlider,
+		&peak4FreqSlider,
+		&peak4GainSlider,
+		&peak4QualitySlider,
+		&peak5FreqSlider,
+		&peak5GainSlider,
+		&peak5QualitySlider,
 		&lowCutFreqSlider,
 		&highCutFreqSlider,
 		&lowCutSlopeSlider,
