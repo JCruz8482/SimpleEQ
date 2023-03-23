@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="ZCqRFB" name="SimpleEQ" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" displaySplashScreen="1" jucerFormatVersion="1"
+              pluginFormats="buildAAX,buildAU,buildVST3" pluginManufacturer="Sunidu"
+              aaxIdentifier="Sunidu.com" companyWebsite="www.sunidu.com" companyEmail="jeremy.sunidu@gamil.com">
   <MAINGROUP id="JeLRCH" name="SimpleEQ">
     <GROUP id="{0FD8C098-B6A0-A4D0-D7A1-B942A8430541}" name="Source">
       <FILE id="k4jktq" name="SimpleEQPeaksSeparate.xml" compile="0" resource="1"
@@ -10,9 +12,6 @@
             file="Source/PluginProcessor.cpp"/>
       <FILE id="hID4N5" name="PluginProcessor.h" compile="0" resource="0"
             file="Source/PluginProcessor.h"/>
-      <FILE id="OrJT6I" name="PluginEditor.cpp" compile="1" resource="0"
-            file="Source/PluginEditor.cpp"/>
-      <FILE id="qmomis" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
     </GROUP>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1" JUCE_VST3_CAN_REPLACE_VST2="0"/>
