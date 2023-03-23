@@ -2,6 +2,8 @@
 
 Simple Compressor built with JUCE and foleys_gui_magic
 
+![SimpleEQ_image!](SimpleEQ/img/SimpleEQ.png)
+
 ## Features
 
 - 5 peak band filters
