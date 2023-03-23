@@ -1,6 +1,6 @@
 # SimpleEQ
 
-Simple Compressor built with JUCE and foleys_gui_magic
+Simple equalizer built with JUCE and foleys_gui_magic
 
 ![SimpleEQ_image!](SimpleEQ/img/SimpleEQscreenshot.png)
 
