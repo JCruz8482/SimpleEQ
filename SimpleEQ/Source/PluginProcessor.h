@@ -6,6 +6,12 @@
   ==============================================================================
 */
 
+/*
+Roadmap
+1. Use MagicFilterPlot to add updated coefficients to plot
+
+*/
+
 #pragma once
 
 #include <JuceHeader.h>
@@ -13,6 +19,7 @@
 
 const auto low_cut_off_range = juce::Range<float>(0, 6);
 const auto high_cut_off_range = juce::Range<float>(21500, 22001);
+static float maxLevel = 24.0f;
 
 template<typename T>
 struct Fifo
@@ -165,7 +172,6 @@ struct ChainSettings
 	float peak5Freq{ 0 }, peak5GainInDecibels{ 0 }, peak5Quality{ 1.f };
 	float lowCutFreq{ 0 }, highCutFreq{ 0 };
 	Slope lowCutSlope{ Slope_12 }, highCutSlope{ Slope_12 };
-	bool lowCutBypassed{ false }, peak1Bypassed{ false }, highCutBypassed{ false };
 };
 
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
@@ -275,7 +281,7 @@ inline auto makeCutFilter(
 //==============================================================================
 /**
 */
-class SimpleEQAudioProcessor : public juce::AudioProcessor
+class SimpleEQAudioProcessor : public foleys::MagicProcessor, private juce::AsyncUpdater
 #if JucePlugin_Enable_ARA
 	, public juce::AudioProcessorARAExtension
 #endif
@@ -284,8 +290,16 @@ public:
 	//==============================================================================
 	SimpleEQAudioProcessor();
 	~SimpleEQAudioProcessor() override;
-
 	//==============================================================================
+
+	enum FilterType
+	{
+		NoFilter = 0,
+		LowCut,
+		Peak,
+		HighPass,
+		LastFilterID
+	};
 	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 	void releaseResources() override;
 
@@ -294,10 +308,6 @@ public:
 #endif
 
 	void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-
-	//==============================================================================
-	juce::AudioProcessorEditor* createEditor() override;
-	bool hasEditor() const override;
 
 	//==============================================================================
 	const juce::String getName() const override;
@@ -314,9 +324,11 @@ public:
 	const juce::String getProgramName(int index) override;
 	void changeProgramName(int index, const juce::String& newName) override;
 
-	//==============================================================================
-	void getStateInformation(juce::MemoryBlock& destData) override;
-	void setStateInformation(const void* data, int sizeInBytes) override;
+	void handleAsyncUpdate() override;
+
+	////==============================================================================
+	//void getStateInformation(juce::MemoryBlock& destData) override;
+	//void setStateInformation(const void* data, int sizeInBytes) override;
 
 	static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 	juce::AudioProcessorValueTreeState apvts{ *this, nullptr, "Parameters", createParameterLayout() };
@@ -325,9 +337,42 @@ public:
 	SingleChannelSampleFifo<BlockType> leftChannelFifo{ Channel::Left };
 	SingleChannelSampleFifo<BlockType> rightChannelFifo{ Channel::Right };
 
+	class FilterAttachment
+	{
+	public:
+		FilterAttachment(
+			Filter& filterToControl,
+			const juce::String& prefixToUse,
+			const juce::CriticalSection& lock);
+
+		std::function<void(const FilterAttachment&)> postFilterUpdate;
+
+		juce::dsp::IIR::Coefficients<float>::Ptr coefficients;
+		double                                   sampleRate = 0.0;
+
+		void setFilterType(FilterType filterType) { this->type = filterType; }
+		void setFreq(float freq) { this->frequency = freq; };
+		void setGain(float gain) { this->gain = gain; }
+		void setQ(float q) { this->quality = q; }
+
+	private:
+		Filter& filter;
+		juce::String                        prefix;
+		const juce::CriticalSection& callbackLock;
+
+		std::atomic<FilterType> type{ NoFilter };
+		std::atomic<float>  frequency{ 1000.0f };
+		std::atomic<float>  gain{ 0.0f };
+		std::atomic<float>  quality{ 1.0f };
+
+		JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FilterAttachment)
+	};
+
 private:
 
 	MonoChain leftChain, rightChain;
+
+	std::atomic<float> gain{ 1.0f };
 
 	void updatePeakFilter(const ChainSettings& chainSettings);
 	void updateFilters();
@@ -337,6 +382,18 @@ private:
 		const Slope slope,
 		CoefficientRefArray(*filterDesignMethod)(float, double, int),
 		const bool isOff);
+
+	FilterAttachment attachment1{ leftChain.get<ChainPositions::Peak1>(), "Q1", getCallbackLock() };
+	FilterAttachment attachment2{ leftChain.get<ChainPositions::Peak2>(), "Q2", getCallbackLock() };
+	FilterAttachment attachment3{ leftChain.get<ChainPositions::Peak3>(), "Q3", getCallbackLock() };
+	FilterAttachment attachment4{ leftChain.get<ChainPositions::Peak4>(), "Q4", getCallbackLock() };
+	FilterAttachment attachment5{ leftChain.get<ChainPositions::Peak5>(), "Q5", getCallbackLock() };
+
+	std::array<FilterAttachment*, 5> attachments
+	{ &attachment1, &attachment2, &attachment3, &attachment4, &attachment5 };
+
+	foleys::MagicPlotSource* analyzer = nullptr;
+	foleys::MagicFilterPlot* plotSum = nullptr;
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SimpleEQAudioProcessor)
 };

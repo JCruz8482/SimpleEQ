@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<magic>
+  <Styles>
+    <Style name="default">
+      <Nodes/>
+      <Classes>
+        <plot-view border="2" background-color="black" border-color="silver" display="contents"/>
+        <nomargin margin="0" padding="0" border="0"/>
+        <group margin="5" padding="5" border="2" flex-direction="column">
+          <media/>
+        </group>
+        <transparent background-color="transparentblack"/>
+        <BackgroundColor background-color="black"/>
+        <peaks flex-direction="column" flex-grow="2"/>
+      </Classes>
+      <Types>
+        <Slider border="0" slider-textbox="textbox-below" lookAndFeel="FoleysFinest"
+                class="BackgroundColor"/>
+        <ToggleButton border="0" max-height="50" caption-size="0" text="Active"/>
+        <TextButton border="0" max-height="50" caption-size="0"/>
+        <ComboBox border="0" max-height="50" caption-size="0" lookAndFeel="FoleysFinest"/>
+        <Plot border="0" margin="0" padding="0" background-color="00000000"
+              radius="0"/>
+        <XYDragComponent border="0" margin="0" padding="0" background-color="00000000"
+                         radius="0"/>
+      </Types>
+      <Palettes>
+        <default/>
+      </Palettes>
+    </Style>
+  </Styles>
+  <View id="root" resizable="1" resize-corner="1" flex-direction="column"
+        width="1300" height="700">
+    <View id="Plot" class="plot-view">
+      <Plot source="input"/>
+    </View>
+    <View>
+      <View flex-direction="column" id="Low Cut" class="group" flex-grow="1.5.0">
+        <Slider caption="LowCut Freq" parameter="LowCut Freq" caption-placement="centred-top"
+                flex-grow="1.0"/>
+        <Slider caption="LowCut Slope" parameter="LowCut Slope" pos-x="-5.37634%"
+                pos-y="48.2353%" pos-width="100%" pos-height="50.084%" flex-shrink="1"
+                flex-grow=".6"/>
+      </View>
+      <View flex-direction="column" flex-grow="2" id="Peak1" class="peaks group">
+        <Slider caption="Peak1 Freq" parameter="Peak1 Freq"/>
+        <View flex-grow="1.0">
+          <Slider caption="Peak1 Gain" parameter="Peak1 Gain" flex-grow="1.0"/>
+          <Slider caption="Peak1 Quality" parameter="Peak1 Quality"/>
+        </View>
+      </View>
+      <View id="Peak2" class="peaks group">
+        <Slider caption="Peak2 Freq" parameter="Peak2 Freq"/>
+        <View>
+          <Slider caption="Peak2 Gain" parameter="Peak2 Gain"/>
+          <Slider caption="Peak2 Quality" parameter="Peak2 Quality"/>
+        </View>
+      </View>
+      <View id="Peak3" class="peaks group">
+        <Slider caption="Peak3 Freq" parameter="Peak3 Freq"/>
+        <View>
+          <Slider caption="Peak3 Gain" parameter="Peak3 Gain"/>
+          <Slider caption="Peak3 Quality" parameter="Peak3 Quality"/>
+        </View>
+      </View>
+      <View id="Peak4" class="peaks group">
+        <Slider caption="Peak4 Freq" parameter="Peak4 Freq"/>
+        <View>
+          <Slider caption="Peak4 Gain" parameter="Peak4 Gain"/>
+          <Slider caption="Peak4 Quality" parameter="Peak4 Quality"/>
+        </View>
+      </View>
+      <View id="Peak5" class="peaks group">
+        <Slider caption="Peak5 Freq" parameter="Peak5 Freq"/>
+        <View>
+          <Slider caption="Peak5 Gain" parameter="Peak5 Gain"/>
+          <Slider caption="Peak5 Quality" parameter="Peak5 Quality"/>
+        </View>
+      </View>
+      <View flex-direction="column" id="High Cut" class="group" flex-grow="1.5">
+        <Slider caption="HighCut Freq" parameter="HighCut Freq"/>
+        <Slider caption="HighCut Slope" parameter="HighCut Slope" flex-grow=".6"/>
+      </View>
+    </View>
+  </View>
+</magic>

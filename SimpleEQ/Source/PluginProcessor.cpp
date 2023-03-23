@@ -7,12 +7,31 @@
 */
 
 #include "PluginProcessor.h"
-#include "PluginEditor.h"
+
+namespace IDs
+{
+	static juce::String paramOutput{ "output" };
+	static juce::String paramType{ "type" };
+	static juce::String paramFreq{ "freq" };
+	static juce::String paramGain{ "gain" };
+	static juce::String paramQuality{ "quality" };
+}
+
+auto createPostUpdateLambda(foleys::MagicProcessorState& magicState, const juce::String& plotID)
+{
+	return [plot = magicState.getObjectWithType<foleys::MagicFilterPlot>(plotID)](const SimpleEQAudioProcessor::FilterAttachment& a)
+	{
+		if (plot != nullptr)
+		{
+			plot->setIIRCoefficients(a.coefficients, maxLevel);
+		}
+	};
+}
 
 //==============================================================================
 SimpleEQAudioProcessor::SimpleEQAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-	: AudioProcessor(BusesProperties()
+	: foleys::MagicProcessor(BusesProperties()
 #if ! JucePlugin_IsMidiEffect
 #if ! JucePlugin_IsSynth
 		.withInput("Input", juce::AudioChannelSet::stereo(), true)
@@ -22,6 +41,19 @@ SimpleEQAudioProcessor::SimpleEQAudioProcessor()
 	)
 #endif
 {
+	FOLEYS_SET_SOURCE_PATH(__FILE__);
+	magicState.setGuiValueTree(BinaryData::SimpleEQPeaksSeparate_xml, BinaryData::SimpleEQPeaksSeparate_xmlSize);
+	analyzer = magicState.createAndAddObject<foleys::MagicAnalyser>("input");
+
+	// GUI MAGIC: add plots to be displayed in the GUI
+	for (size_t i = 0; i < attachments.size(); ++i)
+	{
+		auto name = "plot" + juce::String(i + 1);
+		magicState.createAndAddObject<foleys::MagicFilterPlot>(name);
+		attachments.at(i)->postFilterUpdate = createPostUpdateLambda(magicState, name);
+	}
+
+	plotSum = magicState.createAndAddObject<foleys::MagicFilterPlot>("plotSum");
 }
 
 SimpleEQAudioProcessor::~SimpleEQAudioProcessor()
@@ -93,9 +125,9 @@ void SimpleEQAudioProcessor::changeProgramName(int index, const juce::String& ne
 //==============================================================================
 void SimpleEQAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
+	magicState.prepareToPlay(sampleRate, samplesPerBlock);
 	// Use this method as the place to do any pre-playback
 	// initialisation that you need..
-
 	juce::dsp::ProcessSpec spec;
 	spec.maximumBlockSize = samplesPerBlock;
 	spec.numChannels = 1;
@@ -110,6 +142,8 @@ void SimpleEQAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
 
 	leftChannelFifo.prepare(samplesPerBlock);
 	rightChannelFifo.prepare(samplesPerBlock);
+	analyzer->prepareToPlay(sampleRate, samplesPerBlock);
+	plotSum->prepareToPlay(sampleRate, samplesPerBlock);
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -174,43 +208,33 @@ void SimpleEQAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 
 	leftChannelFifo.update(buffer);
 	rightChannelFifo.update(buffer);
+
+	analyzer->pushSamples(buffer);
 }
 
-//==============================================================================
-bool SimpleEQAudioProcessor::hasEditor() const
-{
-	return true; // (change this to false if you choose to not supply an editor)
-}
-
-juce::AudioProcessorEditor* SimpleEQAudioProcessor::createEditor()
-{
-	return new SimpleEQAudioProcessorEditor(*this);
-	//return new juce::GenericAudioProcessorEditor(*this);
-}
-
-//==============================================================================
-void SimpleEQAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
-{
-	// You should use this method to store your parameters in the memory block.
-	// You could do that either as raw data, or use the XML or ValueTree classes
-	// as intermediaries to make it easy to save and load complex data.
-
-	juce::MemoryOutputStream mos(destData, true);
-	apvts.state.writeToStream(mos);
-}
-
-void SimpleEQAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
-{
-	// You should use this method to restore your parameters from this memory block,
-	// whose contents will have been created by the getStateInformation() call.
-
-	auto tree = juce::ValueTree::readFromData(data, sizeInBytes);
-	if (tree.isValid())
-	{
-		apvts.replaceState(tree);
-		updateFilters();
-	}
-}
+////==============================================================================
+//void SimpleEQAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
+//{
+//	// You should use this method to store your parameters in the memory block.
+//	// You could do that either as raw data, or use the XML or ValueTree classes
+//	// as intermediaries to make it easy to save and load complex data.
+//
+//	juce::MemoryOutputStream mos(destData, true);
+//	apvts.state.writeToStream(mos);
+//}
+//
+//void SimpleEQAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
+//{
+//	// You should use this method to restore your parameters from this memory block,
+//	// whose contents will have been created by the getStateInformation() call.
+//
+//	auto tree = juce::ValueTree::readFromData(data, sizeInBytes);
+//	if (tree.isValid())
+//	{
+//		apvts.replaceState(tree);
+//		updateFilters();
+//	}
+//}
 
 void updateCoefficients(Coefficients& old, const Coefficients& replacements)
 {
@@ -254,6 +278,12 @@ void SimpleEQAudioProcessor::updatePeakFilter(const ChainSettings& chainSettings
 		chainSettings.peak5GainInDecibels,
 		getSampleRate());
 
+	attachment1.coefficients = peak1Coefficients;
+	attachment2.coefficients = peak2Coefficients;
+	attachment3.coefficients = peak3Coefficients;
+	attachment4.coefficients = peak4Coefficients;
+	attachment5.coefficients = peak5Coefficients;
+
 	updateCoefficients(leftChain.get<ChainPositions::Peak1>().coefficients, peak1Coefficients);
 	updateCoefficients(rightChain.get<ChainPositions::Peak1>().coefficients, peak1Coefficients);
 	updateCoefficients(leftChain.get<ChainPositions::Peak2>().coefficients, peak2Coefficients);
@@ -264,6 +294,25 @@ void SimpleEQAudioProcessor::updatePeakFilter(const ChainSettings& chainSettings
 	updateCoefficients(rightChain.get<ChainPositions::Peak4>().coefficients, peak4Coefficients);
 	updateCoefficients(leftChain.get<ChainPositions::Peak5>().coefficients, peak5Coefficients);
 	updateCoefficients(rightChain.get<ChainPositions::Peak5>().coefficients, peak5Coefficients);
+}
+
+void SimpleEQAudioProcessor::handleAsyncUpdate()
+{
+	std::vector<juce::dsp::IIR::Coefficients<float>::Ptr> coefficients;
+	for (auto* a : attachments)
+		coefficients.push_back(a->coefficients);
+
+	plotSum->setIIRCoefficients(gain, coefficients, maxLevel);
+}
+
+SimpleEQAudioProcessor::FilterAttachment::FilterAttachment(
+	Filter& filterToControl,
+	const juce::String& prefixToUse,
+	const juce::CriticalSection& lock)
+	: filter(filterToControl),
+	prefix(prefixToUse),
+	callbackLock(lock)
+{
 }
 
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
@@ -289,9 +338,9 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
 	settings.peak5Quality = apvts.getRawParameterValue("Peak5 Quality")->load();
 	settings.lowCutSlope = static_cast<Slope>(apvts.getRawParameterValue("LowCut Slope")->load());
 	settings.highCutSlope = static_cast<Slope>(apvts.getRawParameterValue("HighCut Slope")->load());
-	settings.lowCutBypassed = apvts.getRawParameterValue("LowCut Bypassed")->load();
-	settings.highCutBypassed = apvts.getRawParameterValue("HighCut Bypassed")->load();
-	settings.peak1Bypassed = apvts.getRawParameterValue("Peak Bypassed")->load();
+	//settings.lowCutBypassed = apvts.getRawParameterValue("LowCut Bypassed")->load();
+	//settings.highCutBypassed = apvts.getRawParameterValue("HighCut Bypassed")->load();
+	//settings.peak1Bypassed = apvts.getRawParameterValue("Peak Bypassed")->load();
 
 	return settings;
 }
@@ -303,12 +352,12 @@ void SimpleEQAudioProcessor::updateFilters()
 	auto lowCutFreq = chainSettings.lowCutFreq;
 	bool isOff = low_cut_off_range.contains(lowCutFreq);
 
-	leftChain.setBypassed<ChainPositions::LowCut>(chainSettings.lowCutBypassed);
+	/*leftChain.setBypassed<ChainPositions::LowCut>(chainSettings.lowCutBypassed);
 	rightChain.setBypassed<ChainPositions::LowCut>(chainSettings.lowCutBypassed);
 	leftChain.setBypassed<ChainPositions::HighCut>(chainSettings.highCutBypassed);
 	rightChain.setBypassed<ChainPositions::HighCut>(chainSettings.highCutBypassed);
 	leftChain.setBypassed<ChainPositions::Peak1>(chainSettings.peak1Bypassed);
-	rightChain.setBypassed<ChainPositions::Peak1>(chainSettings.peak1Bypassed);
+	rightChain.setBypassed<ChainPositions::Peak1>(chainSettings.peak1Bypassed);*/
 
 	updateCutFilter<ChainPositions::LowCut>(
 		chainSettings.lowCutFreq,
@@ -466,10 +515,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::crea
 	layout.add(std::make_unique<juce::AudioParameterChoice>(
 		"HighCut Slope", "HighCut Slope", filterSlopeValues, 0));
 
-	layout.add(std::make_unique<juce::AudioParameterBool>("LowCut Bypassed", "LowCut Bypassed", false));
+	/*layout.add(std::make_unique<juce::AudioParameterBool>("LowCut Bypassed", "LowCut Bypassed", false));
 	layout.add(std::make_unique<juce::AudioParameterBool>("Peak Bypassed", "Peak Bypassed", false));
 	layout.add(std::make_unique<juce::AudioParameterBool>("HighCut Bypassed", "High Cut Bypassed", false));
-	layout.add(std::make_unique<juce::AudioParameterBool>("Analyzer Bypassed", "Analyzer Bypassed", true));
+	layout.add(std::make_unique<juce::AudioParameterBool>("Analyzer Bypassed", "Analyzer Bypassed", true));*/
 
 	return layout;
 }
