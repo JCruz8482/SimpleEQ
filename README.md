@@ -1,3 +1,3 @@
 # SimpleEQ
 
-5 peak band Compressor with low and high pass filter.
+5 peak band compressor with low and high pass filter.
