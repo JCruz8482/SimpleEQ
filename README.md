@@ -2,7 +2,7 @@
 
 Simple Compressor built with JUCE and foleys_gui_magic
 
-![SimpleEQ_image!](SimpleEQ/img/SimpleEQ.png)
+![SimpleEQ_image!](SimpleEQ/img/SimpleEQscreenshot.png)
 
 ## Features
 
