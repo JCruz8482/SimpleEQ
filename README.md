@@ -7,7 +7,7 @@ Simple equalizer built with JUCE and foleys_gui_magic
 ## Features
 
 - 5 peak band filters
-- High pass filter with slope from 12 db/oct - 96 db/oct
+- High and low pass filters with slope from 12 db/oct - 96 db/oct
 - Spectrum analyzer
 - Optimized for resize - sliders adjust to size
 
