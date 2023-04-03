@@ -122,8 +122,8 @@ struct SingleChannelSampleFifo
 	}
 
 	int getNumCompleteBuffersAvailable() const { return audioBufferFifo.getNumAvailableForReading(); }
-	bool isPrepared() const { return prepared.get() }
-	int getSize() const { return size.get() }
+    bool isPrepared() const { return prepared.get(); }
+    int getSize() const { return size.get(); }
 
 	bool getAudioBuffer(BlockType& buffer) { return audioBufferFifo.pull(buffer); }
 private:
